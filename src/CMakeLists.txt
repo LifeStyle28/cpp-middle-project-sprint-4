@@ -1,4 +1,3 @@
-
 add_custom_target(unit_tests)
 
 add_library(function
@@ -25,6 +24,7 @@ add_library(metric_accumulator
     metric_accumulator.cpp
     metric_accumulator_impl/average_accumulator.cpp
     metric_accumulator_impl/sum_average_accumulator.cpp
+    metric_accumulator_impl/categorical_accumulator.cpp
 )
 
 target_link_libraries(metric_accumulator

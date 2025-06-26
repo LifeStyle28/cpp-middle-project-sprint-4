@@ -23,12 +23,22 @@
 namespace analyser::metric {
 
 void MetricExtractor::RegisterMetric(std::unique_ptr<IMetric> metric) {
-    // здесь ваш код
+    if (metric) {
+        metrics.push_back(std::move(metric));
+    }
 }
 
 MetricResults MetricExtractor::Get(const function::Function &func) const {
-    // здесь ваш код
-    return {};
+    MetricResults results;
+    results.reserve(metrics.size());
+
+    for (const auto &metric : metrics) {
+        if (metric) {
+            results.push_back(metric->Calculate(func));
+        }
+    }
+
+    return results;
 }
 
 }  // namespace analyser::metric

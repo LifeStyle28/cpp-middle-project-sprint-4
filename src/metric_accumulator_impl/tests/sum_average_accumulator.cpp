@@ -18,7 +18,7 @@ protected:
 TEST_F(SumAverageAccumulatorTest, InitialState) {
     auto result = accumulator->Get();
     EXPECT_EQ(result.sum, 0);
-    EXPECT_EQ(result.average, 0.0);
+    EXPECT_FLOAT_EQ(result.average, 0.0);
 }
 
 TEST_F(SumAverageAccumulatorTest, SingleValue) {
@@ -26,7 +26,7 @@ TEST_F(SumAverageAccumulatorTest, SingleValue) {
     accumulator->Finalize();
     auto result = accumulator->Get();
     EXPECT_EQ(result.sum, 10);
-    EXPECT_EQ(result.average, 10.0);
+    EXPECT_FLOAT_EQ(result.average, 10.0);
 }
 
 TEST_F(SumAverageAccumulatorTest, MultipleValues) {
@@ -36,7 +36,7 @@ TEST_F(SumAverageAccumulatorTest, MultipleValues) {
     accumulator->Finalize();
     auto result = accumulator->Get();
     EXPECT_EQ(result.sum, 60);
-    EXPECT_EQ(result.average, 20.0);
+    EXPECT_FLOAT_EQ(result.average, 20.0);
 }
 
 TEST_F(SumAverageAccumulatorTest, ZeroValues) {
@@ -45,7 +45,7 @@ TEST_F(SumAverageAccumulatorTest, ZeroValues) {
     accumulator->Finalize();
     auto result = accumulator->Get();
     EXPECT_EQ(result.sum, 0);
-    EXPECT_EQ(result.average, 0.0);
+    EXPECT_FLOAT_EQ(result.average, 0.0);
 }
 
 TEST_F(SumAverageAccumulatorTest, NegativeValues) {
@@ -54,7 +54,7 @@ TEST_F(SumAverageAccumulatorTest, NegativeValues) {
     accumulator->Finalize();
     auto result = accumulator->Get();
     EXPECT_EQ(result.sum, 0);
-    EXPECT_EQ(result.average, 0.0);
+    EXPECT_FLOAT_EQ(result.average, 0.0);
 }
 
 TEST_F(SumAverageAccumulatorTest, NoAccumulationBeforeFinalize) {
@@ -62,7 +62,7 @@ TEST_F(SumAverageAccumulatorTest, NoAccumulationBeforeFinalize) {
     accumulator->Accumulate(CreateMetricResult(20));
     auto result = accumulator->Get();
     EXPECT_EQ(result.sum, 0);
-    EXPECT_EQ(result.average, 0.0);
+    EXPECT_FLOAT_EQ(result.average, 0.0);
 }
 
 TEST_F(SumAverageAccumulatorTest, NoAccumulationAfterFinalize) {
@@ -71,7 +71,7 @@ TEST_F(SumAverageAccumulatorTest, NoAccumulationAfterFinalize) {
     accumulator->Accumulate(CreateMetricResult(20));
     auto result = accumulator->Get();
     EXPECT_EQ(result.sum, 10);
-    EXPECT_EQ(result.average, 10.0);
+    EXPECT_FLOAT_EQ(result.average, 10.0);
 }
 
 TEST_F(SumAverageAccumulatorTest, Reset) {
@@ -80,25 +80,25 @@ TEST_F(SumAverageAccumulatorTest, Reset) {
     accumulator->Finalize();
     auto result = accumulator->Get();
     EXPECT_EQ(result.sum, 30);
-    EXPECT_EQ(result.average, 15.0);
+    EXPECT_FLOAT_EQ(result.average, 15.0);
 
     accumulator->Reset();
     result = accumulator->Get();
     EXPECT_EQ(result.sum, 0);
-    EXPECT_EQ(result.average, 0.0);
+    EXPECT_FLOAT_EQ(result.average, 0.0);
 
     accumulator->Accumulate(CreateMetricResult(5));
     accumulator->Finalize();
     result = accumulator->Get();
     EXPECT_EQ(result.sum, 5);
-    EXPECT_EQ(result.average, 5.0);
+    EXPECT_FLOAT_EQ(result.average, 5.0);
 }
 
 TEST_F(SumAverageAccumulatorTest, EmptyAccumulator) {
     accumulator->Finalize();
     auto result = accumulator->Get();
     EXPECT_EQ(result.sum, 0);
-    EXPECT_EQ(result.average, 0.0);
+    EXPECT_FLOAT_EQ(result.average, 0.0);
 }
 
 TEST_F(SumAverageAccumulatorTest, LargeNumbers) {
@@ -107,7 +107,7 @@ TEST_F(SumAverageAccumulatorTest, LargeNumbers) {
     accumulator->Finalize();
     auto result = accumulator->Get();
     EXPECT_EQ(result.sum, 3000000);
-    EXPECT_EQ(result.average, 1500000.0);
+    EXPECT_FLOAT_EQ(result.average, 1500000.0);
 }
 
 TEST_F(SumAverageAccumulatorTest, SumAverageStructComparison) {

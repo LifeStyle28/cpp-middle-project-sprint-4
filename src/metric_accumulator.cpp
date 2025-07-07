@@ -25,6 +25,8 @@ void MetricsAccumulator::AccumulateNextFunctionResults(const std::vector<metric:
         auto it = accumulators.find(metric_result.metric_name);
         if (it != accumulators.end() && it->second) {
             it->second->Accumulate(metric_result);
+        } else [[unlikely]] {
+            throw std::runtime_error("Accumulator not found or null for metric: " + metric_result.metric_name);
         }
     }
 }

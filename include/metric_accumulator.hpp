@@ -40,6 +40,8 @@ struct MetricsAccumulator {
     void RegisterAccumulator(const std::string &metric_name, std::unique_ptr<Accumulator> acc) {
         if (acc) {
             accumulators[metric_name] = std::move(acc);
+        } else {
+            throw std::runtime_error("Accumulator is null for metric: " + metric_name);
         }
     }
 

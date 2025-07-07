@@ -7,12 +7,19 @@
 
 namespace analyser::metric::metric_impl {
 
+namespace fs = std::filesystem;
+
 class CyclomaticComplexityTest : public ::testing::Test {
 protected:
     void SetUp() override { metric = std::make_unique<CyclomaticComplexityMetric>(); }
 
+    std::string GetTestFilePath(const std::string &filename) const {
+        fs::path test_dir = fs::path(__FILE__).parent_path() / "files";
+        return (test_dir / filename).string();
+    }
+
     function::Function CreateFunctionFromFile(const std::string &filename) {
-        analyser::file::File file(filename);
+        analyser::file::File file(GetTestFilePath(filename));
         analyser::function::FunctionExtractor extractor;
         auto functions = extractor.Get(file);
         if (functions.empty()) {

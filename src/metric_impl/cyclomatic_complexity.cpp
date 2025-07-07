@@ -45,7 +45,7 @@ MetricResult::ValueType CyclomaticComplexityMetric::CalculateImpl(const function
         block = ast;
     }
 
-    static const std::vector<std::string_view> patterns = {
+    static const std::array<std::string_view, 12> patterns = {
         "(if_statement"sv,    "(else_clause"sv,   "(elif_clause"sv,      "(while_statement"sv,
         "(for_statement"sv,   "(try_statement"sv, "(except_clause"sv,    "(finally_clause"sv,
         "(match_statement"sv, "(case_clause"sv,   "(assert_statement"sv, "(conditional_expression"sv};

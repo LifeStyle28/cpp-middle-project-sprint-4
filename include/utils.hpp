@@ -7,12 +7,8 @@
 #include <string_view>
 
 inline int ToInt(std::string_view value) {
-    while (!value.empty() && std::isspace(value.front())) {
-        value.remove_prefix(1);
-    }
-    while (!value.empty() && std::isspace(value.back())) {
-        value.remove_suffix(1);
-    }
+    value.remove_prefix(std::min(value.find_first_not_of(" "), value.size()));
+    value.remove_suffix(std::min(value.find_first_not_of(" "), value.size()));
 
     int result{};
     auto [parse_end_ptr, error_code] = std::from_chars(value.begin(), value.end(), result);

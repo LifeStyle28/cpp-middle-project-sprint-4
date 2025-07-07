@@ -69,9 +69,9 @@ MetricResult::ValueType CountParametersMetric::CalculateImpl(const function::Fun
                                 });
     int count = 0;
 
-    static const std::vector<std::string_view> patterns = {"(identifier"sv,         "(default_parameter"sv,
-                                                           "(typed_parameter"sv,    "(typed_default_parameter"sv,
-                                                           "(list_splat_pattern"sv, "(dictionary_splat_pattern"sv};
+    static const std::array<std::string_view, 6> patterns = {"(identifier"sv,         "(default_parameter"sv,
+                                                             "(typed_parameter"sv,    "(typed_default_parameter"sv,
+                                                             "(list_splat_pattern"sv, "(dictionary_splat_pattern"sv};
 
     // Создаем view для итерации по символам с отслеживанием уровня вложенности
     auto char_with_level = rv::iota(size_t{0}, params_block.size()) |

@@ -2,6 +2,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <boost/program_options.hpp>
 
@@ -10,7 +11,7 @@ namespace analyser::cmd {
 class ProgramOptions {
 public:
     ProgramOptions();
-    ~ProgramOptions();
+    ~ProgramOptions() = default;
 
     bool Parse(int argc, char *argv[]);
 

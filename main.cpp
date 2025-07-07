@@ -1,3 +1,4 @@
+#include <string_view>
 #include <unistd.h>
 
 #include <algorithm>
@@ -5,7 +6,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iomanip>
@@ -16,6 +16,8 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <stdexcept>
+#include <span>
 
 #include "analyse.hpp"
 #include "cmd_options.hpp"
@@ -26,29 +28,156 @@
 #include "metric_accumulator_impl/accumulators.hpp"
 #include "metric_impl/metrics.hpp"
 
+namespace {
+
+// Вспомогательные функции для обработки ошибок
+void validateAnalysisResults(const auto& analysis_results) {
+    if (analysis_results.empty()) {
+        throw std::runtime_error("No functions found in the provided files. Please check if the files contain valid C++ code.");
+    }
+}
+
+template<typename T>
+const T& safeGetAccumulator(const analyser::metric_accumulator::MetricsAccumulator& accumulator,
+                     const std::string &metric_name,
+                     const std::string &context) {
+    try {
+        return accumulator.GetFinalizedAccumulator<T>(metric_name);
+    } catch (const std::exception& e) {
+        throw std::runtime_error("Failed to get " + metric_name + " accumulator for " + context + ": " + e.what());
+    }
+}
+
+template <typename Accumulator>
+void printAggregatedMetrics(const Accumulator& accumulator, const std::string& scope, const std::string& scope_name) {
+    const auto& code_lines_acc = safeGetAccumulator<analyser::metric_accumulator::metric_accumulator_impl::AverageAccumulator>(
+        accumulator, "CodeLinesCount", scope + " " + scope_name);
+    std::print("    CodeLinesCount: {}\n", code_lines_acc.Get());
+
+    const auto& complexity_acc = safeGetAccumulator<analyser::metric_accumulator::metric_accumulator_impl::SumAverageAccumulator>(
+        accumulator, "CyclomaticComplexity", scope + " " + scope_name);
+    auto complexity_result = complexity_acc.Get();
+    std::print("    CyclomaticComplexity_sum: {}\n", complexity_result.sum);
+    std::print("    CyclomaticComplexity_avg: {}\n", complexity_result.average);
+
+    const auto& params_acc = safeGetAccumulator<analyser::metric_accumulator::metric_accumulator_impl::AverageAccumulator>(
+        accumulator, "ParametersCount", scope + " " + scope_name);
+    std::print("    ParametersCount: {}\n", params_acc.Get());
+}
+
+} // anonymous namespace
+
 int main(int argc, char *argv[]) {
-    analyser::cmd::ProgramOptions options;
-    // распарсите входные параметры
+    try {
+        // распарсите входные параметры
+        analyser::cmd::ProgramOptions options;
+        if (!options.Parse(argc, argv)) {
+            std::print(stderr, "Error: Failed to parse command line arguments.\n");
+            return 1;
+        }
 
-    // analyser::metric::MetricExtractor metric_extractor;
-    // зарегистрируйте метрики в metric_extractor
+        const auto& files = options.GetFiles();
 
-    // запустите analyser::AnalyseFunctions
-    // выведете результаты анализа на консоль
+        // зарегистрируйте метрики в metric_extractor
+        analyser::metric::MetricExtractor metric_extractor;
+        metric_extractor.RegisterMetric(std::make_unique<analyser::metric::metric_impl::CodeLinesCountMetric>());
+        metric_extractor.RegisterMetric(std::make_unique<analyser::metric::metric_impl::CyclomaticComplexityMetric>());
+        metric_extractor.RegisterMetric(std::make_unique<analyser::metric::metric_impl::CountParametersMetric>());
+        // metric_extractor.RegisterMetric(std::make_unique<analyser::metric::metric_impl::NamingStyleMetric>());
 
-    // analyser::metric_accumulator::MetricsAccumulator accumulator;
-    // зарегистрируйте аккумуляторы метрик в accumulator
+        // запустите analyser::AnalyseFunctions
+        auto analysis_results = analyser::AnalyseFunctions(files, metric_extractor);
 
-    // запустите analyser::SplitByFiles
-    // запустите analyser::AccumulateFunctionAnalysis для каждого подмножества результатов метрик
-    // выведете результаты на консоль
+        // Валидация результатов анализа
+        validateAnalysisResults(analysis_results);
 
-    // запустите analyser::SplitByClasses
-    // запустите analyser::AccumulateFunctionAnalysis для каждого подмножества результатов метрик
-    // выведете результаты на консоль
+        // зарегистрируйте аккумуляторы метрик в accumulator
+        analyser::metric_accumulator::MetricsAccumulator accumulator;
+        accumulator.RegisterAccumulator("CodeLinesCount", std::make_unique<analyser::metric_accumulator::metric_accumulator_impl::AverageAccumulator>());
+        accumulator.RegisterAccumulator("CyclomaticComplexity", std::make_unique<analyser::metric_accumulator::metric_accumulator_impl::SumAverageAccumulator>());
+        accumulator.RegisterAccumulator("ParametersCount", std::make_unique<analyser::metric_accumulator::metric_accumulator_impl::AverageAccumulator>());
+        // accumulator.RegisterAccumulator("NamingStyle", std::make_unique<analyser::metric_accumulator::metric_accumulator_impl::CategoricalAccumulator>());
 
-    // запустите analyser::AccumulateFunctionAnalysis для всех результатов метрик
-    // выведете результаты на консоль
+        // выведете результаты анализа на консоль
+        std::print("Function Analysis Results:\n");
+        std::print("========================\n");
+        for (const auto& [func, metrics] : analysis_results) {
+            std::string location = func.filename;
+            if (func.class_name.has_value() && !func.class_name->empty()) {
+                location += "[::" + func.class_name.value() + "]";
+            }
+            location += "::" + func.name;
+
+            std::print("{}\n", location);
+            for (const auto& metric : metrics) {
+                std::print("    {}: {}\n", metric.metric_name, metric.value);
+            }
+            std::print("\n");
+        }
+
+        // запустите analyser::SplitByFiles
+        std::print("File-based Aggregation:\n");
+        std::print("======================\n");
+        auto file_groups = analyser::SplitByFiles(analysis_results);
+        for (const auto& file_group : file_groups) {
+            if (file_group.empty()) continue;
+
+            const std::string& filename = file_group[0].first.filename;
+            std::print("Accumulated Analysis for file {}:\n", filename);
+
+            accumulator.ResetAccumulators();
+            // запустите analyser::AccumulateFunctionAnalysis для каждого подмножества результатов метрик
+            analyser::AccumulateFunctionAnalysis(file_group, accumulator);
+
+            // выведете результаты на консоль
+            printAggregatedMetrics(accumulator, "file", filename);
+
+            std::print("\n");
+        }
+
+        // запустите analyser::SplitByClasses
+        std::print("Class-based Aggregation:\n");
+        std::print("========================\n");
+        auto class_groups = analyser::SplitByClasses(analysis_results);
+        for (const auto& class_group : class_groups) {
+            if (class_group.empty()) {
+                continue;
+            }
+
+            for (const auto& class_group_item : class_group) {
+                const std::string& class_name = class_group_item.first.class_name.value() ;
+                std::print("{}", class_name);
+                std::print("Accumulated Analysis for class {}:\n", class_name);
+    
+                accumulator.ResetAccumulators();
+                // запустите analyser::AccumulateFunctionAnalysis для каждого подмножества результатов метрик
+                analyser::AccumulateFunctionAnalysis(class_group, accumulator);
+
+                // выведете результаты на консоль
+                printAggregatedMetrics(accumulator, "class", class_name);
+    
+                std::print("\n");
+            }
+        }
+
+        // запустите analyser::AccumulateFunctionAnalysis для всех результатов метрик
+        analyser::AccumulateFunctionAnalysis(analysis_results, accumulator);
+
+        // выведете общие результаты анализа на консоль
+        std::print("Overall Analysis Results:\n");
+        std::print("========================\n");
+        printAggregatedMetrics(accumulator, "overall analysis", "");
+
+    } catch (const std::runtime_error& e) {
+        std::print(stderr, "Runtime error: {}\n", e.what());
+        return 1;
+    } catch (const std::exception& e) {
+        std::print(stderr, "Unexpected error: {}\n", e.what());
+        return 1;
+    } catch (...) {
+        std::print(stderr, "Unknown error occurred.\n");
+        return 1;
+    }
 
     return 0;
 }

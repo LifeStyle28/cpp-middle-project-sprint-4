@@ -19,6 +19,35 @@
 
 namespace analyser::metric_accumulator::metric_accumulator_impl {
 
-// здесь ваш код
+void AverageAccumulator::Accumulate(const metric::MetricResult &metric_result) {
+    if (is_finalized) {
+        return;
+    }
+    ++count;
+    sum += metric_result.value;
+}
+
+void AverageAccumulator::Finalize() {
+    if (count > 0) {
+        average = static_cast<double>(sum) / count;
+    } else {
+        average = 0.0;
+    }
+    is_finalized = true;
+}
+
+void AverageAccumulator::Reset() {
+    sum = 0;
+    count = 0;
+    average = 0.0;
+    is_finalized = false;
+}
+
+double AverageAccumulator::Get() const {
+    if (!is_finalized) {
+        return 0.0;
+    }
+    return average;
+}
 
 }  // namespace analyser::metric_accumulator::metric_accumulator_impl

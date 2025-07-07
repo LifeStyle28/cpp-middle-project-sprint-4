@@ -1,6 +1,7 @@
 #include "cmd_options.hpp"
 
 #include <exception>
+#include <filesystem>
 #include <iostream>
 #include <print>
 #include <string>
@@ -11,13 +12,23 @@ namespace analyser::cmd {
 
 namespace po = boost::program_options;
 
+template <typename T>
+static void validateInputFiles(std::span<const T> files) {
+    for (const auto &file : files) {
+        if (!std::filesystem::exists(file)) {
+            throw std::runtime_error("File does not exist: " + file);
+        }
+        if (!std::filesystem::is_regular_file(file)) {
+            throw std::runtime_error("Path is not a regular file: " + file);
+        }
+    }
+}
+
 ProgramOptions::ProgramOptions() : desc_("Allowed options") {
     desc_.add_options()("help,h", "Display help message")(
         "file,f", po::value<std::vector<std::string>>(&files_)->required()->multitoken(),
         "List of files to process (required)");
 }
-
-ProgramOptions::~ProgramOptions() = default;
 
 bool ProgramOptions::Parse(int argc, char *argv[]) {
     try {
@@ -36,6 +47,8 @@ bool ProgramOptions::Parse(int argc, char *argv[]) {
             desc_.print(std::cout);
             return false;
         }
+
+        validateInputFiles(std::span<const std::string>(files_));
 
         return true;
     } catch (const std::exception &e) {
